@@ -6,98 +6,148 @@ import { RentCarDto } from './dto/rent-car.dto';
 export class RentalsService {
   constructor(private prisma: PrismaService) {}
 
-  async rent(userId: string, dto: RentCarDto) {
-    const now = new Date();
+  async startRental(userId: string, carId: string) {
+    // Check if user already has an active rental
     const activeRental = await this.prisma.rental.findFirst({
       where: {
         userId,
-        startDate: { lte: now },
-        endDate: { gte: now },
+        status: 'ACTIVE',
       },
     });
     if (activeRental) {
       throw new BadRequestException('User already has an active rental');
     }
 
-    const car = await this.prisma.car.findUnique({ where: { id: dto.carId } });
+    // Check if car exists and is available
+    const car = await this.prisma.car.findUnique({ where: { id: carId } });
     if (!car) {
       throw new NotFoundException('Car not found');
     }
 
     if (car.status !== 'AVAILABLE') {
-      throw new BadRequestException('Car must be AVAILABLE to rent');
+      throw new BadRequestException('Car is not available for rental');
     }
 
-    const start = new Date(dto.startDate);
-    const end = new Date(dto.endDate);
-    if (end <= start) {
-      throw new BadRequestException('endDate must be after startDate');
-    }
-
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const dayCount = Math.ceil((end.getTime() - start.getTime()) / msPerDay);
-    const totalPrice = dayCount * car.dailyRate;
-
+    // Create rental record
     const rental = await this.prisma.rental.create({
       data: {
         userId,
-        carId: dto.carId,
-        startDate: start,
-        endDate: end,
-        totalPrice,
+        carId,
+        startDate: new Date(),
+        endDate: null,
+        status: 'ACTIVE',
+        totalPrice: 0, // Will be calculated when rental ends
       },
     });
 
-    await this.prisma.car.update({ where: { id: car.id }, data: { status: 'RENTED' } });
+    // Update car status to RENTED
+    await this.prisma.car.update({
+      where: { id: carId },
+      data: { status: 'RENTED' }
+    });
 
     return rental;
   }
 
-  async returnRental(userId: string, rentalId: string) {
-    const rental = await this.prisma.rental.findUnique({ where: { id: rentalId } });
+  async stopRental(userId: string, rentalId: string) {
+    // Find the rental
+    const rental = await this.prisma.rental.findUnique({
+      where: { id: rentalId },
+      include: { car: true }
+    });
+
     if (!rental) {
       throw new NotFoundException('Rental not found');
     }
 
     if (rental.userId !== userId) {
-      throw new BadRequestException('Cannot return rental not owned by user');
+      throw new BadRequestException('Cannot stop rental not owned by user');
     }
 
-    if (rental.endDate && rental.endDate <= new Date()) {
-      // if already ended in past or current; but allow as return completion anyway.
+    if (rental.status !== 'ACTIVE') {
+      throw new BadRequestException('Rental is not active');
     }
 
-    const car = await this.prisma.car.findUnique({ where: { id: rental.carId } });
-    if (!car) {
-      throw new NotFoundException('Car not found');
-    }
+    const endDate = new Date();
 
-    await this.prisma.rental.update({
+    // Calculate total price based on rental duration
+    const msPerMinute = 60 * 1000;
+    const minuteCount = Math.ceil((endDate.getTime() - rental.startDate.getTime()) / msPerMinute);
+    const totalPrice = rental.car.startPrice + minuteCount * rental.car.pricePerMinute;
+
+    // Update rental
+    const updatedRental = await this.prisma.rental.update({
       where: { id: rentalId },
       data: {
-        endDate: new Date(),
+        endDate,
+        status: 'FINISHED',
+        totalPrice,
       },
     });
 
-    await this.prisma.car.update({ where: { id: car.id }, data: { status: 'AVAILABLE' } });
+    // Update car status to AVAILABLE
+    await this.prisma.car.update({
+      where: { id: rental.carId },
+      data: { status: 'AVAILABLE' }
+    });
 
-    return { message: 'Car returned successfully' };
+    return updatedRental;
   }
 
-  getMy(userId: string) {
-    return this.prisma.rental.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
+  async getMy(userId: string) {
+    // Get current active rental (include car pricing info for live cost calculation)
+    const currentRental = await this.prisma.rental.findFirst({
+      where: {
+        userId,
+        status: 'ACTIVE'
+      },
       include: {
-        car: true
+        car: true,
       }
     });
+
+    const formattedCurrentRental = currentRental
+      ? {
+          id: currentRental.id,
+          startTime: currentRental.startDate,
+          car: currentRental.car,
+        }
+      : null;
+
+    // Get rental history (finished rentals)
+    const history = await this.prisma.rental.findMany({
+      where: {
+        userId,
+        status: 'FINISHED'
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        car: true,
+      }
+    });
+
+    return {
+      currentRental: formattedCurrentRental,
+      history
+    };
   }
 
   getActive() {
     return this.prisma.rental.findMany({
-      where: { endDate: null },
+      where: { status: 'ACTIVE' },
       include: { user: true, car: true },
+    });
+  }
+
+  getActiveRentals() {
+    return this.prisma.rental.findMany({
+      where: {
+        status: 'ACTIVE',
+      },
+      include: {
+        car: true,
+        user: true,
+      },
     });
   }
 }

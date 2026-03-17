@@ -18,8 +18,16 @@ enum CarStatus {
   RENTED
 }
 
+enum RentalStatus {
+  ACTIVE
+  FINISHED
+}
+
 model User {
   id         String   @id @default(uuid())
+  firstName  String   @default("")
+  lastName   String   @default("")
+  birthDate  DateTime?
   email      String   @unique
   password   String
   role       Role     @default(USER)
@@ -32,15 +40,16 @@ model User {
 }
 
 model Car {
-  id         String    @id @default(uuid())
-  brand      String
-  model      String
-  year       Int
-  dailyRate  Float
-  status     CarStatus @default(AVAILABLE)
-  lat        Float
-  lng        Float
-  createdAt  DateTime  @default(now())
+  id             String    @id @default(uuid())
+  brand          String
+  model          String
+  year           Int
+  startPrice     Float @default(0)
+  pricePerMinute Float @default(0)
+  status         CarStatus @default(AVAILABLE)
+  lat            Float
+  lng            Float
+  createdAt      DateTime  @default(now())
 
   rentals    Rental[]
 
@@ -50,13 +59,14 @@ model Car {
 }
 
 model Rental {
-  id         String   @id @default(uuid())
+  id         String       @id @default(uuid())
   userId     String
   carId      String
   startDate  DateTime
   endDate    DateTime?
+  status     RentalStatus @default(ACTIVE)
   totalPrice Float
-  createdAt  DateTime @default(now())
+  createdAt  DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id])
   car  Car  @relation(fields: [carId], references: [id])
@@ -65,4 +75,5 @@ model Rental {
   @@index([carId])
   @@index([startDate])
   @@index([endDate])
+  @@index([status])
 }

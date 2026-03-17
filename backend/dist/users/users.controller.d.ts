@@ -5,6 +5,20 @@ export declare class UsersController {
     constructor(usersService: UsersService);
     getAll(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
+        firstName: string;
+        lastName: string;
+        birthDate: Date | null;
+        email: string;
+        password: string;
+        role: import(".prisma/client").$Enums.Role;
+        deletedAt: Date | null;
+        createdAt: Date;
+    }[]>;
+    getAdmins(): import(".prisma/client").Prisma.PrismaPromise<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        birthDate: Date | null;
         email: string;
         password: string;
         role: import(".prisma/client").$Enums.Role;
@@ -13,6 +27,9 @@ export declare class UsersController {
     }[]>;
     getMe(user: any): import(".prisma/client").Prisma.Prisma__UserClient<{
         id: string;
+        firstName: string;
+        lastName: string;
+        birthDate: Date | null;
         email: string;
         password: string;
         role: import(".prisma/client").$Enums.Role;
@@ -21,6 +38,9 @@ export declare class UsersController {
     } | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
     update(id: string, dto: UpdateUserDto): Promise<{
         id: string;
+        firstName: string;
+        lastName: string;
+        birthDate: Date | null;
         email: string;
         password: string;
         role: import(".prisma/client").$Enums.Role;
@@ -28,11 +48,6 @@ export declare class UsersController {
         createdAt: Date;
     }>;
     softDelete(id: string): Promise<{
-        id: string;
-        email: string;
-        password: string;
-        role: import(".prisma/client").$Enums.Role;
-        deletedAt: Date | null;
-        createdAt: Date;
+        message: string;
     }>;
 }

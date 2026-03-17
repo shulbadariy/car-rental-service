@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCarDto } from './dto/create-car.dto';
 import { UpdateCarLocationDto } from './dto/update-car-location.dto';
+import { UpdateCarDto } from './dto/update-car.dto';
 import { CarStatus } from '@prisma/client';
 
 @Injectable()
@@ -18,14 +19,56 @@ export class CarsService {
     return this.prisma.car.delete({ where: { id } });
   }
 
+  async updateCar(id: string, dto: UpdateCarDto) {
+    const car = await this.prisma.car.findUnique({ where: { id } });
+    if (!car) throw new NotFoundException('Car not found');
+
+    const { latitude, longitude, ...rest } = dto;
+
+    return this.prisma.car.update({
+      where: { id },
+      data: {
+        ...rest,
+        lat: latitude ?? rest.lat,
+        lng: longitude ?? rest.lng,
+        status: dto.status as CarStatus,
+      },
+    });
+  }
+
   findAll(q?: string) {
     if (q) {
       return this.search(q);
     }
+    return this.prisma.car.findMany({
+      where: { status: 'AVAILABLE' }
+    });
+  }
+
+  findAllIncludingRented() {
     return this.prisma.car.findMany();
   }
 
+  getAllCarsForAdmin() {
+    return this.prisma.car.findMany({
+      include: {
+        rentals: {
+          where: {
+            status: 'ACTIVE',
+          },
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+  }
+
   findOne(id: string) {
+    return this.prisma.car.findUnique({ where: { id } });
+  }
+
+  getCarById(id: string) {
     return this.prisma.car.findUnique({ where: { id } });
   }
 
@@ -35,6 +78,7 @@ export class CarsService {
     const lower = query.toLowerCase();
     return this.prisma.car.findMany({
       where: {
+        status: 'AVAILABLE',
         OR: [
           { brand: { contains: lower, mode: 'insensitive' } },
           { model: { contains: lower, mode: 'insensitive' } },
@@ -47,21 +91,43 @@ export class CarsService {
     brand?: string;
     model?: string;
     year?: number;
-    status?: CarStatus;
-    dailyRateMin?: number;
-    dailyRateMax?: number;
+    minStartPrice?: number;
+    maxStartPrice?: number;
+    minPricePerMinute?: number;
+    maxPricePerMinute?: number;
   }) {
-    const where: any = {};
-    if (params.brand) where.brand = { equals: params.brand, mode: 'insensitive' };
-    if (params.model) where.model = { equals: params.model, mode: 'insensitive' };
+    const where: any = {
+      status: 'AVAILABLE',
+    };
+    if (params.brand) where.brand = { contains: params.brand, mode: 'insensitive' };
+    if (params.model) where.model = { contains: params.model, mode: 'insensitive' };
     if (params.year) where.year = params.year;
-    if (params.status) where.status = params.status;
-    if (params.dailyRateMin || params.dailyRateMax) {
-      where.dailyRate = {};
-      if (params.dailyRateMin) where.dailyRate.gte = params.dailyRateMin;
-      if (params.dailyRateMax) where.dailyRate.lte = params.dailyRateMax;
+    if (params.minStartPrice || params.maxStartPrice) {
+      where.startPrice = {};
+      if (params.minStartPrice) where.startPrice.gte = params.minStartPrice;
+      if (params.maxStartPrice) where.startPrice.lte = params.maxStartPrice;
+    }
+    if (params.minPricePerMinute || params.maxPricePerMinute) {
+      where.pricePerMinute = {};
+      if (params.minPricePerMinute) where.pricePerMinute.gte = params.minPricePerMinute;
+      if (params.maxPricePerMinute) where.pricePerMinute.lte = params.maxPricePerMinute;
     }
     return this.prisma.car.findMany({ where });
+  }
+
+  async getFilterOptions() {
+    const cars = await this.prisma.car.findMany();
+    console.log('CARS:', cars);
+
+    const brands = [...new Set(cars.map((c) => c.brand))];
+    const models = [...new Set(cars.map((c) => c.model))];
+    const years = [...new Set(cars.map((c) => c.year))];
+
+    return {
+      brands,
+      models,
+      years,
+    };
   }
 
   async updateLocation(id: string, dto: UpdateCarLocationDto) {

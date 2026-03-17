@@ -28,10 +28,13 @@ let RentalsController = class RentalsController {
         this.rentalsService = rentalsService;
     }
     rent(user, dto) {
-        return this.rentalsService.rent(user.userId, dto);
+        return this.rentalsService.startRental(user.userId, dto.carId);
     }
-    returnCar(user, dto) {
-        return this.rentalsService.returnRental(user.userId, dto.rentalId);
+    startRental(user, dto) {
+        return this.rentalsService.startRental(user.userId, dto.carId);
+    }
+    stopRental(user, dto) {
+        return this.rentalsService.stopRental(user.userId, dto.rentalId);
     }
     my(user) {
         return this.rentalsService.getMy(user.userId);
@@ -42,7 +45,7 @@ let RentalsController = class RentalsController {
 };
 exports.RentalsController = RentalsController;
 __decorate([
-    (0, common_1.Post)('rent'),
+    (0, common_1.Post)(),
     __param(0, (0, user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -50,13 +53,21 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], RentalsController.prototype, "rent", null);
 __decorate([
-    (0, common_1.Post)('return'),
+    (0, common_1.Post)('start'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, rent_car_dto_1.RentCarDto]),
+    __metadata("design:returntype", void 0)
+], RentalsController.prototype, "startRental", null);
+__decorate([
+    (0, common_1.Post)('stop'),
     __param(0, (0, user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, return_car_dto_1.ReturnCarDto]),
     __metadata("design:returntype", void 0)
-], RentalsController.prototype, "returnCar", null);
+], RentalsController.prototype, "stopRental", null);
 __decorate([
     (0, common_1.Get)('my'),
     __param(0, (0, user_decorator_1.CurrentUser)()),

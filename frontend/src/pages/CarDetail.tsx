@@ -7,15 +7,14 @@ interface Car {
   brand: string;
   model: string;
   year: number;
-  dailyRate: number;
+  startPrice: number;
+  pricePerMinute: number;
   status: string;
 }
 
 const CarDetail = () => {
   const { id } = useParams();
   const [car, setCar] = useState<Car | null>(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [renting, setRenting] = useState(false);
   const navigate = useNavigate();
@@ -35,15 +34,11 @@ const CarDetail = () => {
   }, [id]);
 
   const handleRent = async () => {
-    if (!startDate || !endDate) {
-      alert('Please select dates');
-      return;
-    }
     setRenting(true);
     try {
-      await api.post('/rentals/rent', { carId: id, startDate, endDate });
+      await api.post('/rentals/start', { carId: id });
       alert('Car rented successfully');
-      navigate('/my-rentals');
+      navigate('/profile');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Rent failed');
     } finally {
@@ -60,29 +55,13 @@ const CarDetail = () => {
       <div className="bg-white p-6 rounded shadow-md mb-4">
         <h2 className="text-2xl">{car.brand} {car.model}</h2>
         <p>Year: {car.year}</p>
-        <p>Daily Rate: ${car.dailyRate}</p>
+        <p className="text-green-600 font-semibold">
+          ${car.startPrice.toFixed(2)} + ${car.pricePerMinute.toFixed(2)}/min
+        </p>
         <p>Status: {car.status}</p>
       </div>
       <div className="bg-white p-6 rounded shadow-md w-80 mx-auto">
         <h3 className="text-xl mb-4">Rent This Car</h3>
-        <label className="block mb-2">Start Date</label>
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="w-full p-2 mb-4 border rounded"
-          required
-          disabled={renting}
-        />
-        <label className="block mb-2">End Date</label>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="w-full p-2 mb-4 border rounded"
-          required
-          disabled={renting}
-        />
         <button
           onClick={handleRent}
           className="w-full bg-blue-500 text-white p-2 rounded disabled:opacity-50"

@@ -18,12 +18,18 @@ export class UsersController {
   @Get()
   @Roles(Role.ADMIN, Role.SUPERADMIN)
   getAll() {
-    return this.usersService.findAll();
+    return this.usersService.getAllUsers();
+  }
+
+  @Get('admins')
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  getAdmins() {
+    return this.usersService.getAdmins();
   }
 
   @Get('me')
   getMe(@CurrentUser() user: any) {
-    return this.usersService.findMe(user.userId);
+    return this.usersService.getMe(user.userId);
   }
 
   @Patch(':id')

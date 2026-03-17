@@ -8,6 +8,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CarsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -25,13 +36,45 @@ let CarsService = class CarsService {
             throw new common_1.NotFoundException('Car not found');
         return this.prisma.car.delete({ where: { id } });
     }
+    async updateCar(id, dto) {
+        const car = await this.prisma.car.findUnique({ where: { id } });
+        if (!car)
+            throw new common_1.NotFoundException('Car not found');
+        const { latitude, longitude } = dto, rest = __rest(dto, ["latitude", "longitude"]);
+        return this.prisma.car.update({
+            where: { id },
+            data: Object.assign(Object.assign({}, rest), { lat: latitude !== null && latitude !== void 0 ? latitude : rest.lat, lng: longitude !== null && longitude !== void 0 ? longitude : rest.lng, status: dto.status }),
+        });
+    }
     findAll(q) {
         if (q) {
             return this.search(q);
         }
+        return this.prisma.car.findMany({
+            where: { status: 'AVAILABLE' }
+        });
+    }
+    findAllIncludingRented() {
         return this.prisma.car.findMany();
     }
+    getAllCarsForAdmin() {
+        return this.prisma.car.findMany({
+            include: {
+                rentals: {
+                    where: {
+                        status: 'ACTIVE',
+                    },
+                    include: {
+                        user: true,
+                    },
+                },
+            },
+        });
+    }
     findOne(id) {
+        return this.prisma.car.findUnique({ where: { id } });
+    }
+    getCarById(id) {
         return this.prisma.car.findUnique({ where: { id } });
     }
     async search(q) {
@@ -41,6 +84,7 @@ let CarsService = class CarsService {
         const lower = query.toLowerCase();
         return this.prisma.car.findMany({
             where: {
+                status: 'AVAILABLE',
                 OR: [
                     { brand: { contains: lower, mode: 'insensitive' } },
                     { model: { contains: lower, mode: 'insensitive' } },
@@ -49,23 +93,42 @@ let CarsService = class CarsService {
         });
     }
     async filter(params) {
-        const where = {};
+        const where = {
+            status: 'AVAILABLE',
+        };
         if (params.brand)
-            where.brand = { equals: params.brand, mode: 'insensitive' };
+            where.brand = { contains: params.brand, mode: 'insensitive' };
         if (params.model)
-            where.model = { equals: params.model, mode: 'insensitive' };
+            where.model = { contains: params.model, mode: 'insensitive' };
         if (params.year)
             where.year = params.year;
-        if (params.status)
-            where.status = params.status;
-        if (params.dailyRateMin || params.dailyRateMax) {
-            where.dailyRate = {};
-            if (params.dailyRateMin)
-                where.dailyRate.gte = params.dailyRateMin;
-            if (params.dailyRateMax)
-                where.dailyRate.lte = params.dailyRateMax;
+        if (params.minStartPrice || params.maxStartPrice) {
+            where.startPrice = {};
+            if (params.minStartPrice)
+                where.startPrice.gte = params.minStartPrice;
+            if (params.maxStartPrice)
+                where.startPrice.lte = params.maxStartPrice;
+        }
+        if (params.minPricePerMinute || params.maxPricePerMinute) {
+            where.pricePerMinute = {};
+            if (params.minPricePerMinute)
+                where.pricePerMinute.gte = params.minPricePerMinute;
+            if (params.maxPricePerMinute)
+                where.pricePerMinute.lte = params.maxPricePerMinute;
         }
         return this.prisma.car.findMany({ where });
+    }
+    async getFilterOptions() {
+        const cars = await this.prisma.car.findMany();
+        console.log('CARS:', cars);
+        const brands = [...new Set(cars.map((c) => c.brand))];
+        const models = [...new Set(cars.map((c) => c.model))];
+        const years = [...new Set(cars.map((c) => c.year))];
+        return {
+            brands,
+            models,
+            years,
+        };
     }
     async updateLocation(id, dto) {
         const car = await this.prisma.car.findUnique({ where: { id } });

@@ -13,6 +13,9 @@ export declare class AuthService {
     validateUser(email: string, pass: string): Promise<{
         id: string;
         email: string;
+        firstName: string;
+        lastName: string;
+        birthDate: Date | null;
         role: import(".prisma/client").$Enums.Role;
         deletedAt: Date | null;
         createdAt: Date;

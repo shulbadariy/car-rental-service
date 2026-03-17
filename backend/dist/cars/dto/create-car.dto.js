@@ -34,11 +34,17 @@ __decorate([
     __metadata("design:type", Number)
 ], CreateCarDto.prototype, "year", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 33.5 }),
+    (0, swagger_1.ApiProperty)({ example: 10.0 }),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.IsPositive)(),
     __metadata("design:type", Number)
-], CreateCarDto.prototype, "dailyRate", void 0);
+], CreateCarDto.prototype, "startPrice", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: 0.25 }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsPositive)(),
+    __metadata("design:type", Number)
+], CreateCarDto.prototype, "pricePerMinute", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: 34.05 }),
     (0, class_validator_1.IsNumber)(),

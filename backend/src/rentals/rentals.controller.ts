@@ -16,14 +16,19 @@ import { CurrentUser } from '../common/decorators/user.decorator';
 export class RentalsController {
   constructor(private readonly rentalsService: RentalsService) {}
 
-  @Post('rent')
+  @Post()
   rent(@CurrentUser() user: any, @Body() dto: RentCarDto) {
-    return this.rentalsService.rent(user.userId, dto);
+    return this.rentalsService.startRental(user.userId, dto.carId);
   }
 
-  @Post('return')
-  returnCar(@CurrentUser() user: any, @Body() dto: ReturnCarDto) {
-    return this.rentalsService.returnRental(user.userId, dto.rentalId);
+  @Post('start')
+  startRental(@CurrentUser() user: any, @Body() dto: RentCarDto) {
+    return this.rentalsService.startRental(user.userId, dto.carId);
+  }
+
+  @Post('stop')
+  stopRental(@CurrentUser() user: any, @Body() dto: ReturnCarDto) {
+    return this.rentalsService.stopRental(user.userId, dto.rentalId);
   }
 
   @Get('my')

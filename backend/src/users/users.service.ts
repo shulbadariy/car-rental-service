@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -6,8 +6,24 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.user.findMany({ where: { deletedAt: null } });
+  getAllUsers() {
+    return this.prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        role: 'USER',
+      },
+    });
+  }
+
+  getAdmins() {
+    return this.prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        role: {
+          in: ['ADMIN', 'SUPERADMIN'],
+        },
+      },
+    });
   }
 
   findOne(id: string) {
@@ -18,15 +34,39 @@ export class UsersService {
     return this.findOne(userId);
   }
 
+  getMe(userId: string) {
+    return this.prisma.user.findUnique({ where: { id: userId } });
+  }
+
   async update(id: string, dto: UpdateUserDto) {
     const user = await this.findOne(id);
     if (!user) throw new NotFoundException('User not found');
-    return this.prisma.user.update({ where: { id }, data: dto });
+
+    const { role, ...safeData } = dto;
+
+    const data: any = {
+      ...safeData,
+      birthDate: safeData.birthDate ? new Date(safeData.birthDate) : safeData.birthDate,
+    };
+
+    return this.prisma.user.update({ where: { id }, data });
   }
 
   async softDelete(id: string) {
     const user = await this.findOne(id);
     if (!user) throw new NotFoundException('User not found');
-    return this.prisma.user.update({ where: { id }, data: { deletedAt: new Date() } });
+
+    if (user.role === 'SUPERADMIN') {
+      throw new BadRequestException('Cannot delete SUPERADMIN');
+    }
+
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return { message: 'User soft-deleted successfully' };
   }
 }

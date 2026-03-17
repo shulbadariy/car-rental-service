@@ -9,7 +9,8 @@ export declare class CarsController {
         brand: string;
         model: string;
         year: number;
-        dailyRate: number;
+        startPrice: number;
+        pricePerMinute: number;
         status: import(".prisma/client").$Enums.CarStatus;
         lat: number;
         lng: number;
@@ -20,51 +21,61 @@ export declare class CarsController {
         brand: string;
         model: string;
         year: number;
-        dailyRate: number;
+        startPrice: number;
+        pricePerMinute: number;
         status: import(".prisma/client").$Enums.CarStatus;
         lat: number;
         lng: number;
         createdAt: Date;
     }>;
-    findAll(q?: string): Promise<{
+    findAll(q?: string, brand?: string, model?: string, year?: string, minStartPrice?: string, maxStartPrice?: string, minPricePerMinute?: string, maxPricePerMinute?: string): Promise<{
         id: string;
         brand: string;
         model: string;
         year: number;
-        dailyRate: number;
+        startPrice: number;
+        pricePerMinute: number;
         status: import(".prisma/client").$Enums.CarStatus;
         lat: number;
         lng: number;
         createdAt: Date;
     }[]>;
-    findOne(id: string): import(".prisma/client").Prisma.Prisma__CarClient<{
-        id: string;
-        brand: string;
-        model: string;
-        year: number;
-        dailyRate: number;
-        status: import(".prisma/client").$Enums.CarStatus;
-        lat: number;
-        lng: number;
-        createdAt: Date;
-    } | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
     search(q: string): Promise<{
         id: string;
         brand: string;
         model: string;
         year: number;
-        dailyRate: number;
+        startPrice: number;
+        pricePerMinute: number;
         status: import(".prisma/client").$Enums.CarStatus;
         lat: number;
         lng: number;
         createdAt: Date;
     }[]>;
-    filter(brand?: string, model?: string, year?: string, status?: string, dailyRateMin?: string, dailyRateMax?: string): Promise<{
+    getFilterOptions(): Promise<{
+        brands: string[];
+        models: string[];
+        years: number[];
+    }>;
+    getAllCars(): import(".prisma/client").Prisma.PrismaPromise<{
         id: string;
         brand: string;
         model: string;
         year: number;
-        dailyRate: number;
+        startPrice: number;
+        pricePerMinute: number;
+        status: import(".prisma/client").$Enums.CarStatus;
+        lat: number;
+        lng: number;
+        createdAt: Date;
+    }[]>;
+    filter(brand?: string, model?: string, year?: string, minStartPrice?: string, maxStartPrice?: string, minPricePerMinute?: string, maxPricePerMinute?: string): Promise<{
+        id: string;
+        brand: string;
+        model: string;
+        year: number;
+        startPrice: number;
+        pricePerMinute: number;
         status: import(".prisma/client").$Enums.CarStatus;
         lat: number;
         lng: number;
@@ -75,7 +86,8 @@ export declare class CarsController {
         brand: string;
         model: string;
         year: number;
-        dailyRate: number;
+        startPrice: number;
+        pricePerMinute: number;
         status: import(".prisma/client").$Enums.CarStatus;
         lat: number;
         lng: number;
@@ -86,10 +98,23 @@ export declare class CarsController {
         brand: string;
         model: string;
         year: number;
-        dailyRate: number;
+        startPrice: number;
+        pricePerMinute: number;
         status: import(".prisma/client").$Enums.CarStatus;
         lat: number;
         lng: number;
         createdAt: Date;
     }[]>;
+    getCarById(id: string): import(".prisma/client").Prisma.Prisma__CarClient<{
+        id: string;
+        brand: string;
+        model: string;
+        year: number;
+        startPrice: number;
+        pricePerMinute: number;
+        status: import(".prisma/client").$Enums.CarStatus;
+        lat: number;
+        lng: number;
+        createdAt: Date;
+    } | null, null, import("@prisma/client/runtime/library").DefaultArgs>;
 }

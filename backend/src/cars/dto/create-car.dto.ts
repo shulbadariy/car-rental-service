@@ -17,10 +17,15 @@ export class CreateCarDto {
   @IsNumber()
   year!: number;
 
-  @ApiProperty({ example: 33.5 })
+  @ApiProperty({ example: 10.0 })
   @IsNumber()
   @IsPositive()
-  dailyRate!: number;
+  startPrice!: number;
+
+  @ApiProperty({ example: 0.25 })
+  @IsNumber()
+  @IsPositive()
+  pricePerMinute!: number;
 
   @ApiProperty({ example: 34.05 })
   @IsNumber()

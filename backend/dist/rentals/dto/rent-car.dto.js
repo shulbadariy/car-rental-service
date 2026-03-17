@@ -16,19 +16,9 @@ class RentCarDto {
 }
 exports.RentCarDto = RentCarDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'user-uuid' }),
+    (0, swagger_1.ApiProperty)({ example: 'car-uuid' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], RentCarDto.prototype, "carId", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ example: '2026-04-01T10:00:00.000Z' }),
-    (0, class_validator_1.IsDateString)(),
-    __metadata("design:type", String)
-], RentCarDto.prototype, "startDate", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ example: '2026-04-05T10:00:00.000Z' }),
-    (0, class_validator_1.IsDateString)(),
-    __metadata("design:type", String)
-], RentCarDto.prototype, "endDate", void 0);
 //# sourceMappingURL=rent-car.dto.js.map

@@ -1,45 +1,75 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { RentCarDto } from './dto/rent-car.dto';
 export declare class RentalsService {
     private prisma;
     constructor(prisma: PrismaService);
-    rent(userId: string, dto: RentCarDto): Promise<{
+    startRental(userId: string, carId: string): Promise<{
         id: string;
         startDate: Date;
         endDate: Date | null;
+        status: import(".prisma/client").$Enums.RentalStatus;
         totalPrice: number;
         createdAt: Date;
         userId: string;
         carId: string;
     }>;
-    returnRental(userId: string, rentalId: string): Promise<{
-        message: string;
+    stopRental(userId: string, rentalId: string): Promise<{
+        id: string;
+        startDate: Date;
+        endDate: Date | null;
+        status: import(".prisma/client").$Enums.RentalStatus;
+        totalPrice: number;
+        createdAt: Date;
+        userId: string;
+        carId: string;
     }>;
-    getMy(userId: string): import(".prisma/client").Prisma.PrismaPromise<({
-        car: {
+    getMy(userId: string): Promise<{
+        currentRental: {
             id: string;
+            startTime: Date;
+            car: {
+                id: string;
+                status: import(".prisma/client").$Enums.CarStatus;
+                createdAt: Date;
+                brand: string;
+                model: string;
+                year: number;
+                startPrice: number;
+                pricePerMinute: number;
+                lat: number;
+                lng: number;
+            };
+        } | null;
+        history: ({
+            car: {
+                id: string;
+                status: import(".prisma/client").$Enums.CarStatus;
+                createdAt: Date;
+                brand: string;
+                model: string;
+                year: number;
+                startPrice: number;
+                pricePerMinute: number;
+                lat: number;
+                lng: number;
+            };
+        } & {
+            id: string;
+            startDate: Date;
+            endDate: Date | null;
+            status: import(".prisma/client").$Enums.RentalStatus;
+            totalPrice: number;
             createdAt: Date;
-            brand: string;
-            model: string;
-            year: number;
-            dailyRate: number;
-            status: import(".prisma/client").$Enums.CarStatus;
-            lat: number;
-            lng: number;
-        };
-    } & {
-        id: string;
-        startDate: Date;
-        endDate: Date | null;
-        totalPrice: number;
-        createdAt: Date;
-        userId: string;
-        carId: string;
-    })[]>;
+            userId: string;
+            carId: string;
+        })[];
+    }>;
     getActive(): import(".prisma/client").Prisma.PrismaPromise<({
         user: {
             id: string;
             createdAt: Date;
+            firstName: string;
+            lastName: string;
+            birthDate: Date | null;
             email: string;
             password: string;
             role: import(".prisma/client").$Enums.Role;
@@ -47,12 +77,13 @@ export declare class RentalsService {
         };
         car: {
             id: string;
+            status: import(".prisma/client").$Enums.CarStatus;
             createdAt: Date;
             brand: string;
             model: string;
             year: number;
-            dailyRate: number;
-            status: import(".prisma/client").$Enums.CarStatus;
+            startPrice: number;
+            pricePerMinute: number;
             lat: number;
             lng: number;
         };
@@ -60,6 +91,41 @@ export declare class RentalsService {
         id: string;
         startDate: Date;
         endDate: Date | null;
+        status: import(".prisma/client").$Enums.RentalStatus;
+        totalPrice: number;
+        createdAt: Date;
+        userId: string;
+        carId: string;
+    })[]>;
+    getActiveRentals(): import(".prisma/client").Prisma.PrismaPromise<({
+        user: {
+            id: string;
+            createdAt: Date;
+            firstName: string;
+            lastName: string;
+            birthDate: Date | null;
+            email: string;
+            password: string;
+            role: import(".prisma/client").$Enums.Role;
+            deletedAt: Date | null;
+        };
+        car: {
+            id: string;
+            status: import(".prisma/client").$Enums.CarStatus;
+            createdAt: Date;
+            brand: string;
+            model: string;
+            year: number;
+            startPrice: number;
+            pricePerMinute: number;
+            lat: number;
+            lng: number;
+        };
+    } & {
+        id: string;
+        startDate: Date;
+        endDate: Date | null;
+        status: import(".prisma/client").$Enums.RentalStatus;
         totalPrice: number;
         createdAt: Date;
         userId: string;

@@ -32,23 +32,47 @@ let CarsController = class CarsController {
     remove(id) {
         return this.carsService.remove(id);
     }
-    findAll(q) {
-        return this.carsService.findAll(q);
-    }
-    findOne(id) {
-        return this.carsService.findOne(id);
+    findAll(q, brand, model, year, minStartPrice, maxStartPrice, minPricePerMinute, maxPricePerMinute) {
+        if (q) {
+            return this.carsService.findAll(q);
+        }
+        if (brand ||
+            model ||
+            year ||
+            minStartPrice ||
+            maxStartPrice ||
+            minPricePerMinute ||
+            maxPricePerMinute) {
+            return this.carsService.filter({
+                brand,
+                model,
+                year: year ? parseInt(year, 10) : undefined,
+                minStartPrice: minStartPrice ? parseFloat(minStartPrice) : undefined,
+                maxStartPrice: maxStartPrice ? parseFloat(maxStartPrice) : undefined,
+                minPricePerMinute: minPricePerMinute ? parseFloat(minPricePerMinute) : undefined,
+                maxPricePerMinute: maxPricePerMinute ? parseFloat(maxPricePerMinute) : undefined,
+            });
+        }
+        return this.carsService.findAll();
     }
     search(q) {
         return this.carsService.search(q);
     }
-    filter(brand, model, year, status, dailyRateMin, dailyRateMax) {
+    getFilterOptions() {
+        return this.carsService.getFilterOptions();
+    }
+    getAllCars() {
+        return this.carsService.findAllIncludingRented();
+    }
+    filter(brand, model, year, minStartPrice, maxStartPrice, minPricePerMinute, maxPricePerMinute) {
         return this.carsService.filter({
             brand,
             model,
             year: year ? parseInt(year, 10) : undefined,
-            status: status,
-            dailyRateMin: dailyRateMin ? parseFloat(dailyRateMin) : undefined,
-            dailyRateMax: dailyRateMax ? parseFloat(dailyRateMax) : undefined,
+            minStartPrice: minStartPrice ? parseFloat(minStartPrice) : undefined,
+            maxStartPrice: maxStartPrice ? parseFloat(maxStartPrice) : undefined,
+            minPricePerMinute: minPricePerMinute ? parseFloat(minPricePerMinute) : undefined,
+            maxPricePerMinute: maxPricePerMinute ? parseFloat(maxPricePerMinute) : undefined,
         });
     }
     updateLocation(id, dto) {
@@ -56,6 +80,9 @@ let CarsController = class CarsController {
     }
     near(lat, lng, radius) {
         return this.carsService.findNear(parseFloat(lat), parseFloat(lng), parseInt(radius, 10));
+    }
+    getCarById(id) {
+        return this.carsService.getCarById(id);
     }
 };
 exports.CarsController = CarsController;
@@ -82,17 +109,17 @@ __decorate([
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)('q')),
+    __param(1, (0, common_1.Query)('brand')),
+    __param(2, (0, common_1.Query)('model')),
+    __param(3, (0, common_1.Query)('year')),
+    __param(4, (0, common_1.Query)('minStartPrice')),
+    __param(5, (0, common_1.Query)('maxStartPrice')),
+    __param(6, (0, common_1.Query)('minPricePerMinute')),
+    __param(7, (0, common_1.Query)('maxPricePerMinute')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CarsController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], CarsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)('search'),
     __param(0, (0, common_1.Query)('q')),
@@ -101,15 +128,28 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], CarsController.prototype, "search", null);
 __decorate([
+    (0, common_1.Get)('filters'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CarsController.prototype, "getFilterOptions", null);
+__decorate([
+    (0, common_1.Get)('all'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CarsController.prototype, "getAllCars", null);
+__decorate([
     (0, common_1.Get)('filter'),
     __param(0, (0, common_1.Query)('brand')),
     __param(1, (0, common_1.Query)('model')),
     __param(2, (0, common_1.Query)('year')),
-    __param(3, (0, common_1.Query)('status')),
-    __param(4, (0, common_1.Query)('dailyRateMin')),
-    __param(5, (0, common_1.Query)('dailyRateMax')),
+    __param(3, (0, common_1.Query)('minStartPrice')),
+    __param(4, (0, common_1.Query)('maxStartPrice')),
+    __param(5, (0, common_1.Query)('minPricePerMinute')),
+    __param(6, (0, common_1.Query)('maxPricePerMinute')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CarsController.prototype, "filter", null);
 __decorate([
@@ -134,6 +174,13 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", void 0)
 ], CarsController.prototype, "near", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], CarsController.prototype, "getCarById", null);
 exports.CarsController = CarsController = __decorate([
     (0, swagger_1.ApiTags)('cars'),
     (0, common_1.Controller)('cars'),

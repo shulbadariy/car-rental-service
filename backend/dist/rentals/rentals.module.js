@@ -10,13 +10,14 @@ exports.RentalsModule = void 0;
 const common_1 = require("@nestjs/common");
 const rentals_service_1 = require("./rentals.service");
 const rentals_controller_1 = require("./rentals.controller");
+const admin_rentals_controller_1 = require("./admin-rentals.controller");
 let RentalsModule = class RentalsModule {
 };
 exports.RentalsModule = RentalsModule;
 exports.RentalsModule = RentalsModule = __decorate([
     (0, common_1.Module)({
         providers: [rentals_service_1.RentalsService],
-        controllers: [rentals_controller_1.RentalsController],
+        controllers: [rentals_controller_1.RentalsController, admin_rentals_controller_1.AdminRentalsController],
     })
 ], RentalsModule);
 //# sourceMappingURL=rentals.module.js.map

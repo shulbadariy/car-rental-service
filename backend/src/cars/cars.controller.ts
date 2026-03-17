@@ -30,13 +30,41 @@ export class CarsController {
   }
 
   @Get()
-  findAll(@Query('q') q?: string) {
-    return this.carsService.findAll(q);
-  }
+  findAll(
+    @Query('q') q?: string,
+    @Query('brand') brand?: string,
+    @Query('model') model?: string,
+    @Query('year') year?: string,
+    @Query('minStartPrice') minStartPrice?: string,
+    @Query('maxStartPrice') maxStartPrice?: string,
+    @Query('minPricePerMinute') minPricePerMinute?: string,
+    @Query('maxPricePerMinute') maxPricePerMinute?: string,
+  ) {
+    if (q) {
+      return this.carsService.findAll(q);
+    }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.carsService.findOne(id);
+    if (
+      brand ||
+      model ||
+      year ||
+      minStartPrice ||
+      maxStartPrice ||
+      minPricePerMinute ||
+      maxPricePerMinute
+    ) {
+      return this.carsService.filter({
+        brand,
+        model,
+        year: year ? parseInt(year, 10) : undefined,
+        minStartPrice: minStartPrice ? parseFloat(minStartPrice) : undefined,
+        maxStartPrice: maxStartPrice ? parseFloat(maxStartPrice) : undefined,
+        minPricePerMinute: minPricePerMinute ? parseFloat(minPricePerMinute) : undefined,
+        maxPricePerMinute: maxPricePerMinute ? parseFloat(maxPricePerMinute) : undefined,
+      });
+    }
+
+    return this.carsService.findAll();
   }
 
   @Get('search')
@@ -44,22 +72,34 @@ export class CarsController {
     return this.carsService.search(q);
   }
 
+  @Get('filters')
+  getFilterOptions() {
+    return this.carsService.getFilterOptions();
+  }
+
+  @Get('all')
+  getAllCars() {
+    return this.carsService.findAllIncludingRented();
+  }
+
   @Get('filter')
   filter(
     @Query('brand') brand?: string,
     @Query('model') model?: string,
     @Query('year') year?: string,
-    @Query('status') status?: string,
-    @Query('dailyRateMin') dailyRateMin?: string,
-    @Query('dailyRateMax') dailyRateMax?: string,
+    @Query('minStartPrice') minStartPrice?: string,
+    @Query('maxStartPrice') maxStartPrice?: string,
+    @Query('minPricePerMinute') minPricePerMinute?: string,
+    @Query('maxPricePerMinute') maxPricePerMinute?: string,
   ) {
     return this.carsService.filter({
       brand,
       model,
       year: year ? parseInt(year, 10) : undefined,
-      status: status as any,
-      dailyRateMin: dailyRateMin ? parseFloat(dailyRateMin) : undefined,
-      dailyRateMax: dailyRateMax ? parseFloat(dailyRateMax) : undefined,
+      minStartPrice: minStartPrice ? parseFloat(minStartPrice) : undefined,
+      maxStartPrice: maxStartPrice ? parseFloat(maxStartPrice) : undefined,
+      minPricePerMinute: minPricePerMinute ? parseFloat(minPricePerMinute) : undefined,
+      maxPricePerMinute: maxPricePerMinute ? parseFloat(maxPricePerMinute) : undefined,
     });
   }
 
@@ -76,5 +116,10 @@ export class CarsController {
   @UseGuards(JwtAuthGuard)
   near(@Query('lat') lat: string, @Query('lng') lng: string, @Query('radius') radius: string) {
     return this.carsService.findNear(parseFloat(lat), parseFloat(lng), parseInt(radius, 10));
+  }
+
+  @Get(':id')
+  getCarById(@Param('id') id: string) {
+    return this.carsService.getCarById(id);
   }
 }

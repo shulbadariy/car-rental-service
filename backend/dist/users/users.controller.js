@@ -27,10 +27,13 @@ let UsersController = class UsersController {
         this.usersService = usersService;
     }
     getAll() {
-        return this.usersService.findAll();
+        return this.usersService.getAllUsers();
+    }
+    getAdmins() {
+        return this.usersService.getAdmins();
     }
     getMe(user) {
-        return this.usersService.findMe(user.userId);
+        return this.usersService.getMe(user.userId);
     }
     update(id, dto) {
         return this.usersService.update(id, dto);
@@ -47,6 +50,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "getAll", null);
+__decorate([
+    (0, common_1.Get)('admins'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.SUPERADMIN),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getAdmins", null);
 __decorate([
     (0, common_1.Get)('me'),
     __param(0, (0, user_decorator_1.CurrentUser)()),

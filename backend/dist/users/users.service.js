@@ -8,6 +8,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
@@ -16,8 +27,23 @@ let UsersService = class UsersService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    findAll() {
-        return this.prisma.user.findMany({ where: { deletedAt: null } });
+    getAllUsers() {
+        return this.prisma.user.findMany({
+            where: {
+                deletedAt: null,
+                role: 'USER',
+            },
+        });
+    }
+    getAdmins() {
+        return this.prisma.user.findMany({
+            where: {
+                deletedAt: null,
+                role: {
+                    in: ['ADMIN', 'SUPERADMIN'],
+                },
+            },
+        });
     }
     findOne(id) {
         return this.prisma.user.findFirst({ where: { id, deletedAt: null } });
@@ -25,17 +51,31 @@ let UsersService = class UsersService {
     findMe(userId) {
         return this.findOne(userId);
     }
+    getMe(userId) {
+        return this.prisma.user.findUnique({ where: { id: userId } });
+    }
     async update(id, dto) {
         const user = await this.findOne(id);
         if (!user)
             throw new common_1.NotFoundException('User not found');
-        return this.prisma.user.update({ where: { id }, data: dto });
+        const { role } = dto, safeData = __rest(dto, ["role"]);
+        const data = Object.assign(Object.assign({}, safeData), { birthDate: safeData.birthDate ? new Date(safeData.birthDate) : safeData.birthDate });
+        return this.prisma.user.update({ where: { id }, data });
     }
     async softDelete(id) {
         const user = await this.findOne(id);
         if (!user)
             throw new common_1.NotFoundException('User not found');
-        return this.prisma.user.update({ where: { id }, data: { deletedAt: new Date() } });
+        if (user.role === 'SUPERADMIN') {
+            throw new common_1.BadRequestException('Cannot delete SUPERADMIN');
+        }
+        await this.prisma.user.update({
+            where: { id },
+            data: {
+                deletedAt: new Date(),
+            },
+        });
+        return { message: 'User soft-deleted successfully' };
     }
 };
 exports.UsersService = UsersService;
