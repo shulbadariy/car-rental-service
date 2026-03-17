@@ -1,0 +1,8 @@
+dist/
+*.js
+*.d.ts
+*.tsbuildinfo
+
+!frontend/eslint.config.js
+!frontend/postcss.config.js
+!frontend/tailwind.config.js
