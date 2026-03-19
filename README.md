@@ -31,42 +31,46 @@ All roles inherit the permissions of the USER role.
   - Cannot manage cars or rentals
 
 ## 🚀 Quick Start
-```bash
-git clone https://github.com/shulbadariy/car-rental-service.git
-cd car-rental-service
 
-# Backend
+### Backend
+
+```bash
 cd backend
 npm install
 cp .env.example .env
 npx prisma migrate dev && npx prisma db seed
 npm run start:dev
+```
 
-# Frontend
+### Frontend
+
+```bash
 cd ../frontend
 npm install
 cp .env.example .env
 npm run dev
+```
 
 Open: http://localhost:5173
 
-```md
+
 ## 👤 Demo Accounts
 
-| Role        | Email            | Password |
-|------------|------------------|----------|
-| SUPERADMIN | admin@test.com   | 123456   |
-| ADMIN      | admin2@test.com  | 123456   |
-| USER       | user@test.com    | 123456   |
-📝 Notes
+| Role       | Email                                     | Password |
+| ---------- | ----------------------------------------- | -------- |
+| SUPERADMIN | [admin@test.com](mailto:admin@test.com)   | 123456   |
+| ADMIN      | [admin2@test.com](mailto:admin2@test.com) | 123456   |
+| USER       | [user@test.com](mailto:user@test.com)     | 123456   |
 
-PostgreSQL must be running locally
+## 📄 Notes
 
-Only one active rental per user
+* PostgreSQL must be running locally
+* Only one active rental per user
+* Cars with active rentals cannot be deleted
 
-Cars with active rentals cannot be deleted
-
-📄 License
+## 📄 License
 
 Educational project
-@zpwebbear — project is ready for review 
+
+@zpwebbear — project is ready for review
+
