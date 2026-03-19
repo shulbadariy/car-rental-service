@@ -49,10 +49,6 @@ npm run dev
 
 Open: http://localhost:5173
 
-# ✅ Demo Accounts тоже нужно поправить
-
-### 💬 сделай так:
-
 ## 👤 Demo Accounts
 
 | Role        | Email            | Password |
