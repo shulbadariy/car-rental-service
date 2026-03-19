@@ -31,6 +31,7 @@ All roles inherit the permissions of the USER role.
   - Cannot manage cars or rentals
 
 ## 🚀 Quick Start
+```bash
 git clone https://github.com/shulbadariy/car-rental-service.git
 cd car-rental-service
 
@@ -49,6 +50,7 @@ npm run dev
 
 Open: http://localhost:5173
 
+```md
 ## 👤 Demo Accounts
 
 | Role        | Email            | Password |
