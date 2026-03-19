@@ -4,9 +4,11 @@ import { CarsService } from './cars.service';
 import { CreateCarDto } from './dto/create-car.dto';
 import { UpdateCarLocationDto } from './dto/update-car-location.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Role } from '@prisma/client';
+import { CurrentUser } from '../common/decorators/user.decorator';
 
 @ApiTags('cars')
 @Controller('cars')
@@ -30,7 +32,10 @@ export class CarsController {
   }
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   findAll(
+    @Query('includeRented') includeRented: string,
+    @CurrentUser() user?: { userId?: string; role?: string },
     @Query('q') q?: string,
     @Query('brand') brand?: string,
     @Query('model') model?: string,
@@ -40,11 +45,10 @@ export class CarsController {
     @Query('minPricePerMinute') minPricePerMinute?: string,
     @Query('maxPricePerMinute') maxPricePerMinute?: string,
   ) {
-    if (q) {
-      return this.carsService.findAll(q);
-    }
+    const shouldIncludeRented = includeRented === 'true';
 
-    if (
+    // Determine if filters/search are active
+    const hasFilters = !!(
       brand ||
       model ||
       year ||
@@ -52,7 +56,15 @@ export class CarsController {
       maxStartPrice ||
       minPricePerMinute ||
       maxPricePerMinute
-    ) {
+    );
+    const hasSearch = !!q;
+    const hasActiveFilters = hasFilters || hasSearch;
+
+    if (q) {
+      return this.carsService.search(q, shouldIncludeRented, user, !hasActiveFilters);
+    }
+
+    if (hasFilters) {
       return this.carsService.filter({
         brand,
         model,
@@ -61,10 +73,10 @@ export class CarsController {
         maxStartPrice: maxStartPrice ? parseFloat(maxStartPrice) : undefined,
         minPricePerMinute: minPricePerMinute ? parseFloat(minPricePerMinute) : undefined,
         maxPricePerMinute: maxPricePerMinute ? parseFloat(maxPricePerMinute) : undefined,
-      });
+      }, shouldIncludeRented, user, !hasActiveFilters);
     }
 
-    return this.carsService.findAll();
+    return this.carsService.findAll(shouldIncludeRented, user, !hasActiveFilters);
   }
 
   @Get('search')
@@ -75,11 +87,6 @@ export class CarsController {
   @Get('filters')
   getFilterOptions() {
     return this.carsService.getFilterOptions();
-  }
-
-  @Get('all')
-  getAllCars() {
-    return this.carsService.findAllIncludingRented();
   }
 
   @Get('filter')
@@ -119,7 +126,8 @@ export class CarsController {
   }
 
   @Get(':id')
-  getCarById(@Param('id') id: string) {
-    return this.carsService.getCarById(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  getCarById(@Param('id') id: string, @CurrentUser() user?: { role?: string }) {
+    return this.carsService.getCarById(id, user);
   }
 }

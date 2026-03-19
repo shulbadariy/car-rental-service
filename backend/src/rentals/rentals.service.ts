@@ -1,6 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { RentCarDto } from './dto/rent-car.dto';
+
+const USER_PUBLIC_SELECT = {
+  id: true,
+  email: true,
+  role: true,
+  firstName: true,
+  lastName: true,
+  birthDate: true,
+} as const;
 
 @Injectable()
 export class RentalsService {
@@ -15,17 +24,22 @@ export class RentalsService {
       },
     });
     if (activeRental) {
-      throw new BadRequestException('User already has an active rental');
+      throw new BadRequestException('You already have an active rental.');
     }
 
     // Check if car exists and is available
-    const car = await this.prisma.car.findUnique({ where: { id: carId } });
+    const car = await this.prisma.car.findFirst({
+      where: {
+        id: carId,
+        deletedAt: null,
+      },
+    });
     if (!car) {
-      throw new NotFoundException('Car not found');
+      throw new NotFoundException('Car not found.');
     }
 
     if (car.status !== 'AVAILABLE') {
-      throw new BadRequestException('Car is not available for rental');
+      throw new BadRequestException('This car is not available right now.');
     }
 
     // Create rental record
@@ -49,7 +63,7 @@ export class RentalsService {
     return rental;
   }
 
-  async stopRental(userId: string, rentalId: string) {
+  async stopRental(userId: string, rentalId: string, role?: Role | string) {
     // Find the rental
     const rental = await this.prisma.rental.findUnique({
       where: { id: rentalId },
@@ -57,22 +71,25 @@ export class RentalsService {
     });
 
     if (!rental) {
-      throw new NotFoundException('Rental not found');
+      throw new NotFoundException('Rental not found.');
     }
 
-    if (rental.userId !== userId) {
-      throw new BadRequestException('Cannot stop rental not owned by user');
+    const isAdmin = role === Role.ADMIN || role === Role.SUPERADMIN;
+
+    if (rental.userId !== userId && !isAdmin) {
+      throw new BadRequestException('You can only stop your own rental.');
     }
 
     if (rental.status !== 'ACTIVE') {
-      throw new BadRequestException('Rental is not active');
+      throw new BadRequestException('This rental is already closed.');
     }
 
     const endDate = new Date();
 
-    // Calculate total price based on rental duration
+    // Calculate total price based on rental duration (first minute is free)
     const msPerMinute = 60 * 1000;
-    const minuteCount = Math.ceil((endDate.getTime() - rental.startDate.getTime()) / msPerMinute);
+    const rawMinutes = Math.ceil((endDate.getTime() - rental.startDate.getTime()) / msPerMinute);
+    const minuteCount = Math.max(0, rawMinutes - 1);
     const totalPrice = rental.car.startPrice + minuteCount * rental.car.pricePerMinute;
 
     // Update rental
@@ -92,6 +109,45 @@ export class RentalsService {
     });
 
     return updatedRental;
+  }
+
+  async forceStopRental(rentalId: string) {
+    const rental = await this.prisma.rental.findUnique({
+      where: { id: rentalId },
+      include: { car: true },
+    });
+
+    if (!rental) {
+      throw new NotFoundException('Rental not found.');
+    }
+
+    if (rental.status !== 'ACTIVE') {
+      throw new BadRequestException('Rental already finished.');
+    }
+
+    const endDate = new Date();
+
+    const msPerMinute = 60 * 1000;
+    const rawMinutes = Math.ceil((endDate.getTime() - rental.startDate.getTime()) / msPerMinute);
+    const minuteCount = Math.max(0, rawMinutes - 1);
+
+    const totalPrice = rental.car.startPrice + minuteCount * rental.car.pricePerMinute;
+
+    await this.prisma.rental.update({
+      where: { id: rentalId },
+      data: {
+        status: 'FINISHED',
+        endDate,
+        totalPrice,
+      },
+    });
+
+    await this.prisma.car.update({
+      where: { id: rental.carId },
+      data: { status: 'AVAILABLE' },
+    });
+
+    return { success: true };
   }
 
   async getMy(userId: string) {
@@ -132,13 +188,6 @@ export class RentalsService {
     };
   }
 
-  getActive() {
-    return this.prisma.rental.findMany({
-      where: { status: 'ACTIVE' },
-      include: { user: true, car: true },
-    });
-  }
-
   getActiveRentals() {
     return this.prisma.rental.findMany({
       where: {
@@ -146,7 +195,9 @@ export class RentalsService {
       },
       include: {
         car: true,
-        user: true,
+        user: {
+          select: USER_PUBLIC_SELECT,
+        },
       },
     });
   }

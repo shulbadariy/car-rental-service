@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface User {
   id: string;
@@ -82,8 +84,7 @@ const EditUserModal = ({
 };
 
 const AdminUsers = () => {
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'SUPERADMIN';
+  const { user: currentUser } = useAuth();
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,13 +94,15 @@ const AdminUsers = () => {
   const [editLastName, setEditLastName] = useState('');
   const [editBirthDate, setEditBirthDate] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
       const res = await api.get('/admin/users');
       setUsers(res.data);
-    } catch (err: any) {
-      alert('Failed to load users');
+    } catch {
+      toast.error("We couldn't load users. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -134,33 +137,48 @@ const AdminUsers = () => {
       birthDate: editBirthDate || undefined,
     };
 
-    console.log(editingUserId, data);
-
     try {
       setSavingEdit(true);
-      const token = localStorage.getItem('token');
-      await api.patch(`/admin/users/${editingUserId}`, data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await api.patch(`/admin/users/${editingUserId}`, data);
 
       setUsers((prev) => prev.map((u) => (u.id === editingUserId ? { ...u, ...data } : u)));
       closeEditModal();
-    } catch (err: any) {
-      alert('Failed to edit user');
+    } catch {
+      toast.error("We couldn't update this user. Please try again.");
     } finally {
       setSavingEdit(false);
     }
   };
 
-  const deleteUser = async (user: User) => {
+  const canDeleteUser = (targetUser: User) => {
+    return (
+      (currentUser?.role === 'ADMIN' && targetUser.role === 'USER') ||
+      (currentUser?.role === 'SUPERADMIN' && targetUser.id !== currentUser.id)
+    );
+  };
+
+  const handleDelete = (userId: string) => {
+    setSelectedUserId(userId);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedUserId) return;
+
     try {
-      await api.delete(`/admin/users/${user.id}`);
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
-    } catch (err: any) {
-      alert('Failed to delete user');
+      await api.delete(`/admin/users/${selectedUserId}`);
+      toast.success('User deleted');
+      setConfirmOpen(false);
+      setSelectedUserId(null);
+      fetchUsers();
+    } catch {
+      toast.error("We couldn't delete this user. Please try again.");
     }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+    setSelectedUserId(null);
   };
 
   if (loading) return <div className="text-center p-4">Loading users...</div>;
@@ -180,45 +198,62 @@ const AdminUsers = () => {
         onSave={saveEditUser}
         onCancel={closeEditModal}
       />
-      <table className="min-w-full bg-white shadow-md rounded">
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Delete user"
+        message="Are you sure you want to delete this user?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <table className="min-w-full">
         <thead>
-          <tr className="bg-gray-200">
-            <th className="py-2 px-4 text-left">First Name</th>
-            <th className="py-2 px-4 text-left">Last Name</th>
-            <th className="py-2 px-4 text-left">Email</th>
-            <th className="py-2 px-4 text-left">Birth Date</th>
-            <th className="py-2 px-4 text-left">Role</th>
-            <th className="py-2 px-4 text-left">Actions</th>
+          <tr>
+            <th className="py-2 px-4 text-left text-xs uppercase tracking-wide text-gray-500 bg-gray-50">First Name</th>
+            <th className="py-2 px-4 text-left text-xs uppercase tracking-wide text-gray-500 bg-gray-50">Last Name</th>
+            <th className="py-2 px-4 text-left text-xs uppercase tracking-wide text-gray-500 bg-gray-50">Email</th>
+            <th className="py-2 px-4 text-left text-xs uppercase tracking-wide text-gray-500 bg-gray-50">Birth Date</th>
+            <th className="py-2 px-4 text-left text-xs uppercase tracking-wide text-gray-500 bg-gray-50">Role</th>
+            <th className="py-2 px-4 text-left text-xs uppercase tracking-wide text-gray-500 bg-gray-50">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user.id} className="border-t">
-              <td className="py-2 px-4">{user.firstName}</td>
-              <td className="py-2 px-4">{user.lastName}</td>
-              <td className="py-2 px-4">{user.email}</td>
-              <td className="py-2 px-4">{user.birthDate ? user.birthDate.slice(0, 10) : '-'}</td>
-              <td className="py-2 px-4">{user.role}</td>
-              <td className="py-2 px-4 space-x-2">
+          {users.map((tableUser) => (
+            <tr key={tableUser.id} className="border-b hover:bg-gray-50 transition even:bg-gray-50">
+              <td className="py-2 px-4 font-medium text-gray-900">{tableUser.firstName}</td>
+              <td className="py-2 px-4 font-medium text-gray-900">{tableUser.lastName}</td>
+              <td className="py-2 px-4 text-gray-600 text-sm">{tableUser.email}</td>
+              <td className="py-2 px-4 text-gray-600 text-sm">{tableUser.birthDate ? tableUser.birthDate.slice(0, 10) : '-'}</td>
+              <td className="py-2 px-4">
+                <span className="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-700">
+                  {tableUser.role}
+                </span>
+              </td>
+              <td className="py-2 px-4">
+                <div className="flex gap-2">
                 <button
-                  onClick={() => openEditModal(user)}
-                  className="bg-yellow-500 text-white px-2 py-1 rounded text-sm"
+                  onClick={() => openEditModal(tableUser)}
+                  className="bg-yellow-400 hover:bg-yellow-500 text-white text-sm px-3 py-1 rounded"
                 >
                   Edit
                 </button>
-                {isSuperAdmin && (
+                {canDeleteUser(tableUser) && (
                   <button
-                    onClick={() => deleteUser(user)}
-                    className="bg-red-500 text-white px-2 py-1 rounded text-sm"
+                    onClick={() => handleDelete(tableUser.id)}
+                    className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1 rounded"
                   >
                     Delete
                   </button>
                 )}
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 };

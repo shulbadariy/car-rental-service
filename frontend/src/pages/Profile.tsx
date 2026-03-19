@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import api from '../services/api';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface UserProfile {
   id: string;
@@ -38,11 +41,13 @@ interface MyRentalsResponse {
 }
 
 const Profile = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [currentRental, setCurrentRental] = useState<CurrentRental | null>(null);
   const [history, setHistory] = useState<RentalHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [minutes, setMinutes] = useState(0);
+  const [isStopModalOpen, setIsStopModalOpen] = useState(false);
 
   const fetchProfileData = async () => {
     setLoading(true);
@@ -56,8 +61,8 @@ const Profile = () => {
       const rentals: MyRentalsResponse = rentalsRes.data;
       setCurrentRental(rentals.currentRental);
       setHistory(rentals.history);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to load profile');
+    } catch {
+      toast.error("We couldn't load your profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -92,17 +97,22 @@ const Profile = () => {
     return startPrice + ppm * minutes;
   }, [currentRental, minutes]);
 
-  const handleStopRental = async () => {
+  const confirmStopRental = async () => {
     if (!currentRental) return;
-    if (!confirm('Are you sure you want to stop this rental?')) return;
 
     try {
       await api.post('/rentals/stop', { rentalId: currentRental.id });
-      alert('Rental stopped successfully');
+      toast.success('Rental stopped successfully');
+      setIsStopModalOpen(false);
       fetchProfileData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to stop rental');
+    } catch {
+      toast.error("We couldn't stop the rental. Please try again.");
     }
+  };
+
+  const handleStopRental = () => {
+    if (!currentRental) return;
+    setIsStopModalOpen(true);
   };
 
   if (loading) {
@@ -110,51 +120,75 @@ const Profile = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-8">
+      <ConfirmModal
+        isOpen={isStopModalOpen}
+        title="Stop rental"
+        message="Are you sure you want to stop this rental?"
+        confirmText="Stop rental"
+        confirmVariant="danger"
+        onConfirm={confirmStopRental}
+        onCancel={() => setIsStopModalOpen(false)}
+      />
+
       <h1 className="text-3xl font-bold">Profile</h1>
 
       {currentRental && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-          <h2 className="text-xl font-semibold text-blue-900 mb-3">Active Rental</h2>
-          <p className="text-lg font-semibold">
+        <div className="rounded-xl border border-blue-200 bg-blue-100 p-6 shadow-md space-y-2">
+          <div className="border-b border-blue-200 pb-2 mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Active Rental</h2>
+          </div>
+          <p className="text-lg font-semibold text-gray-900">
             {currentRental.car.brand} {currentRental.car.model}
           </p>
-          <p className="text-blue-800">Rented for: {minutes} minute{minutes === 1 ? '' : 's'}</p>
-          <p className="text-blue-800 font-semibold">Current price: ${currentPrice.toFixed(2)}</p>
-          <button
-            onClick={handleStopRental}
-            className="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-          >
-            Stop Rental
-          </button>
+          <p className="text-blue-900/80">Rented for: {minutes} minute{minutes === 1 ? '' : 's'}</p>
+          <p className="text-2xl font-bold text-green-600">Current price: ${currentPrice.toFixed(2)}</p>
+          <div className="flex gap-3 justify-center mt-4">
+            <button
+              onClick={() => navigate(`/cars/${currentRental.car.id}`)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              View Car Details
+            </button>
+            <button
+              onClick={handleStopRental}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Stop Rental
+            </button>
+          </div>
         </div>
       )}
 
       <div className="bg-white rounded-lg shadow-md p-5">
-        <h2 className="text-xl font-semibold mb-4">User Info</h2>
-        <div className="space-y-2 text-gray-700">
-          <p><span className="font-semibold">First Name:</span> {user?.firstName || '-'}</p>
-          <p><span className="font-semibold">Last Name:</span> {user?.lastName || '-'}</p>
-          <p><span className="font-semibold">Email:</span> {user?.email || '-'}</p>
+        <div className="border-b pb-2 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">User Info</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-left">
+          <p><span className="text-gray-500 text-sm">First Name:</span> <span className="text-gray-900 font-medium">{user?.firstName || '-'}</span></p>
+          <p><span className="text-gray-500 text-sm">Last Name:</span> <span className="text-gray-900 font-medium">{user?.lastName || '-'}</span></p>
+          <p><span className="text-gray-500 text-sm">Email:</span> <span className="text-gray-900 font-medium">{user?.email || '-'}</span></p>
           <p>
-            <span className="font-semibold">Birth Date:</span>{' '}
-            {user?.birthDate ? new Date(user.birthDate).toLocaleDateString() : '-'}
+            <span className="text-gray-500 text-sm">Birth Date:</span>{' '}
+            <span className="text-gray-900 font-medium">{user?.birthDate ? new Date(user.birthDate).toLocaleDateString() : '-'}</span>
           </p>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-5">
-        <h2 className="text-xl font-semibold mb-4">Rental History</h2>
+        <div className="border-b pb-2 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Rental History</h2>
+        </div>
         {history.length === 0 ? (
           <p className="text-gray-500">No rental history found.</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {history.map((rental) => (
-              <div key={rental.id} className="border rounded p-4">
-                <p className="font-semibold">Car: {rental.car.brand} {rental.car.model}</p>
-                <p>Start: {new Date(rental.startDate).toLocaleString()}</p>
-                <p>End: {rental.endDate ? new Date(rental.endDate).toLocaleString() : '-'}</p>
-                <p>Total price: ${Number(rental.totalPrice ?? 0).toFixed(2)}</p>
+              <div key={rental.id} className="bg-gray-50 rounded-lg shadow-sm p-4 space-y-1">
+                <p className="font-semibold text-gray-900">{rental.car.brand} {rental.car.model}</p>
+                <p className="text-sm text-gray-600">Start: {new Date(rental.startDate).toLocaleString()}</p>
+                <p className="text-sm text-gray-600">End: {rental.endDate ? new Date(rental.endDate).toLocaleString() : '-'}</p>
+                <p className="font-semibold text-green-600">Total price: ${Number(rental.totalPrice ?? 0).toFixed(2)}</p>
               </div>
             ))}
           </div>

@@ -10,22 +10,49 @@ export class AuthService {
   constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
   async register(dto: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (existing) {
-      throw new UnauthorizedException('Email already in use');
-    }
+    const existingUser = await this.prisma.user.findFirst({ where: { email: dto.email } });
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: passwordHash,
-        role: Role.USER,
-      },
-    });
+    if (existingUser && existingUser.deletedAt === null) {
+      throw new UnauthorizedException('This email is already registered.');
+    }
 
-    return { id: user.id, email: user.email, role: user.role };
+    let user;
+
+    if (existingUser && existingUser.deletedAt !== null) {
+      user = await this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          deletedAt: null,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          birthDate: new Date(dto.birthDate),
+          password: passwordHash,
+          role: Role.USER,
+        },
+      });
+    } else {
+      user = await this.prisma.user.create({
+        data: {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          birthDate: new Date(dto.birthDate),
+          email: dto.email,
+          password: passwordHash,
+          role: Role.USER,
+        },
+      });
+    }
+
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      birthDate: user.birthDate,
+      email: user.email,
+      role: user.role,
+    };
   }
 
   async validateUser(email: string, pass: string) {

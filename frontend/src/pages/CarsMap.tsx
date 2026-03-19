@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import L from 'leaflet';
 import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import toast from 'react-hot-toast';
 import api from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 
 interface User {
 	id: string;
@@ -81,15 +83,32 @@ function getDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 const CarsMap = () => {
 	const navigate = useNavigate();
+	const { user: authUser, token } = useAuth();
+	const isAuthenticated = Boolean(token);
+	const [searchParams] = useSearchParams();
+	const latParam = parseFloat(searchParams.get('lat') ?? '');
+	const lngParam = parseFloat(searchParams.get('lng') ?? '');
+	const targetCenter =
+		Number.isFinite(latParam) && Number.isFinite(lngParam)
+			? ([latParam, lngParam] as [number, number])
+			: null;
+
 	const [cars, setCars] = useState<Car[]>([]);
 	const [user, setUser] = useState<User | null>(null);
-	const [center, setCenter] = useState<[number, number]>(defaultCenter);
+	const [center, setCenter] = useState<[number, number]>(targetCenter ?? defaultCenter);
 	const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 	const [radius, setRadius] = useState(5);
+	const [radiusInput, setRadiusInput] = useState(5);
 	const [isRadiusEnabled, setIsRadiusEnabled] = useState(true);
 	const [myRental, setMyRental] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+
+	useEffect(() => {
+		if (targetCenter) {
+			setCenter(targetCenter);
+		}
+	}, [targetCenter]);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -97,15 +116,28 @@ const CarsMap = () => {
 			setError('');
 
 			try {
-				const userRes = await api.get('/users/me');
-				const currentUser = userRes.data;
-				setUser(currentUser);
+				let currentUser: User | null = null;
 
-				const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERADMIN';
-				const carsRes = await api.get(isAdmin ? '/admin/cars' : '/cars');
+				if (token) {
+					try {
+						const userRes = await api.get('/users/me');
+						currentUser = userRes.data;
+						setUser(currentUser);
+					} catch {
+						// If token is invalid/expired, continue in guest mode without surfacing an error.
+						currentUser = null;
+						setUser(null);
+					}
+				} else {
+					setUser(null);
+				}
+
+				const effectiveRole = currentUser?.role ?? authUser?.role;
+				const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'SUPERADMIN';
+				const carsRes = await api.get(isAdmin && token ? '/admin/cars' : '/cars');
 				setCars(carsRes.data);
-			} catch (err: any) {
-				setError(err.response?.data?.message || 'Failed to load map data');
+			} catch {
+				setError("We couldn't load the map. Please try again.");
 				setCars([]);
 			} finally {
 				setLoading(false);
@@ -113,7 +145,7 @@ const CarsMap = () => {
 		};
 
 		fetchData();
-	}, []);
+	}, [authUser?.role, token]);
 
 	useEffect(() => {
 		const fetchMyRental = async () => {
@@ -176,23 +208,45 @@ const CarsMap = () => {
 		[visibleCars, userLocation, radius, isRadiusEnabled, myRental],
 	);
 
-	const getLocation = () => {
-		if (!navigator.geolocation) {
-			alert('Geolocation is not supported in this browser');
+	const selectedCar = useMemo(() => {
+		if (!targetCenter) return null;
+		const [selectedLat, selectedLng] = targetCenter;
+
+		return cars.find(
+			(car) =>
+				Math.abs(car.lat - selectedLat) < 0.000001 &&
+				Math.abs(car.lng - selectedLng) < 0.000001,
+		) ?? null;
+	}, [cars, targetCenter]);
+
+	useEffect(() => {
+		setRadiusInput(radius);
+	}, [radius]);
+
+	const getUserLocation = () => {
+		if (!isAuthenticated) {
+			toast('Login to use location features');
 			return;
 		}
 
+		if (!navigator.geolocation) return;
+
 		navigator.geolocation.getCurrentPosition(
-			(pos) => {
-				const { latitude, longitude } = pos.coords;
+			(position) => {
+				const { latitude, longitude } = position.coords;
 				setUserLocation({ lat: latitude, lng: longitude });
 				setCenter([latitude, longitude]);
 			},
 			() => {
-				alert('Failed to get your location');
+				toast.error("We couldn't access your location. Please check browser permissions.");
 			},
 		);
 	};
+
+	useEffect(() => {
+		if (!isAuthenticated) return;
+		getUserLocation();
+	}, [isAuthenticated]);
 
 	if (loading) {
 		return <div className="text-center p-6">Loading map...</div>;
@@ -203,32 +257,28 @@ const CarsMap = () => {
 	}
 
 	return (
-		<div className="container mx-auto p-6 space-y-4">
+		<div className="container mx-auto p-6 space-y-6">
 			<div className="flex items-center justify-between gap-4 flex-wrap">
 				<div>
-					<h1 className="text-3xl font-bold">Cars Map</h1>
-					<p className="text-gray-600">
-						{isAdmin
-							? 'Admin view: green markers are available, red markers are rented.'
-							: 'User view: only available cars are shown.'}
-					</p>
+					<h1 className="text-3xl font-bold text-gray-900">Cars Map</h1>
+					<p className="text-gray-600 text-sm mt-1">Showing available cars near you</p>
 				</div>
 				<div className="flex items-center gap-2 flex-wrap">
 					<button
-						onClick={getLocation}
-						className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+						onClick={getUserLocation}
+						className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm"
 					>
-						Use my location
+						Show my location
 					</button>
 				</div>
 			</div>
 
-			<div className="bg-white rounded-xl shadow-md p-4 space-y-3">
+			<div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
 				<div className="flex items-center justify-between gap-4 flex-wrap">
-					<label className="font-medium text-slate-800">
-						Radius: {isRadiusEnabled ? `${radius.toFixed(1)} km` : 'OFF'}
-					</label>
-					<label className="flex items-center gap-2 text-sm text-slate-800">
+					<p className="text-gray-800 font-medium">
+						Radius: <span className="font-semibold">{isRadiusEnabled ? `${radiusInput.toFixed(1)} km` : 'OFF'}</span>
+					</p>
+					<label className="flex items-center gap-2 text-sm text-gray-600">
 						Radius Filter
 						<input
 							type="checkbox"
@@ -237,18 +287,22 @@ const CarsMap = () => {
 						/>
 					</label>
 				</div>
-				<input
-					type="range"
-					min="0"
-					max="25"
-					step="0.1"
-					value={radius}
-					onChange={(e) => {
-						setRadius(Number(e.target.value));
-						setIsRadiusEnabled(true);
-					}}
-					className="w-full"
-				/>
+				<div className="relative z-10">
+					<input
+						type="range"
+						min="1"
+						max="20"
+						step="0.1"
+						value={radiusInput}
+						onChange={(e) => {
+							setRadiusInput(Number(e.target.value));
+							setIsRadiusEnabled(true);
+						}}
+						onMouseUp={() => setRadius(radiusInput)}
+						onTouchEnd={() => setRadius(radiusInput)}
+						className="w-full"
+					/>
+				</div>
 			</div>
 
 			<div className="bg-white rounded-xl shadow-md p-3">
@@ -256,7 +310,7 @@ const CarsMap = () => {
 					<RecenterMap center={center} />
 					<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-					{userLocation && isRadiusEnabled && radius > 0 && (
+					{isAuthenticated && userLocation && isRadiusEnabled && radius > 0 && (
 						<Circle
 							center={[userLocation.lat, userLocation.lng]}
 							radius={radius * 1000}
@@ -270,7 +324,7 @@ const CarsMap = () => {
 						/>
 					)}
 
-					{userLocation && (
+					{isAuthenticated && userLocation && (
 						<Marker position={[userLocation.lat, userLocation.lng]} icon={blueIcon}>
 							<Popup>
 								<div>
@@ -283,12 +337,14 @@ const CarsMap = () => {
 					)}
 
 					{filteredCars.map((car) => {
+						const isSelected = selectedCar?.id === car.id;
+
 						const isRented = car.status === 'RENTED';
 						const isMine = car.id === myRental;
 						const distance = userLocation
 							? getDistance(userLocation.lat, userLocation.lng, car.lat, car.lng).toFixed(2)
 							: null;
-						const icon = isMine ? myCarIcon : isRented ? redIcon : greenIcon;
+						const icon = isSelected ? myCarIcon : isMine ? myCarIcon : isRented ? redIcon : greenIcon;
 
 						return (
 							<Marker
@@ -298,31 +354,23 @@ const CarsMap = () => {
 							>
 								<Popup>
 									<div className="space-y-1 min-w-[180px]">
-										<strong>{car.brand} {car.model}</strong>
-										<br />
-										<span>Year: {car.year}</span>
-										<br />
-										<span>Start: ${car.startPrice.toFixed(2)}</span>
-										<br />
-										<span>Per min: ${car.pricePerMinute.toFixed(2)}</span>
-										<br />
+										<strong className="text-lg font-semibold text-gray-900">{car.brand} {car.model}</strong>
+										<p className="text-sm text-gray-600">Year: {car.year}</p>
+										<p className="text-sm text-gray-600">Start: <span className="text-green-600 font-semibold">${car.startPrice.toFixed(2)}</span></p>
+										<p className="text-sm text-gray-600">Per min: <span className="text-green-600 font-semibold">${car.pricePerMinute.toFixed(2)}</span></p>
 										{isMine ? (
-											<span style={{ color: 'purple' }}>YOUR CAR</span>
+											<p style={{ color: 'purple' }}>YOUR CAR</p>
 										) : (
-											<span style={{ color: isRented ? 'red' : 'green' }}>
+											<p style={{ color: isRented ? 'red' : 'green' }}>
 												{isRented ? 'IN USE' : 'AVAILABLE'}
-											</span>
+											</p>
 										)}
-										<br />
 										{distance && (
-											<>
-												<span>Distance: {distance} km</span>
-												<br />
-											</>
+											<p className="text-sm text-gray-600">Distance: {distance} km</p>
 										)}
 										<button
 											onClick={() => navigate(`/cars/${car.id}`)}
-											className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+											className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded"
 										>
 											View
 										</button>

@@ -34,13 +34,13 @@ export class UsersController {
 
   @Patch(':id')
   @Roles(Role.SUPERADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
+  update(@CurrentUser() actor: any, @Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.usersService.update(id, dto, actor.role);
   }
 
   @Patch(':id/soft-delete')
   @Roles(Role.SUPERADMIN)
-  softDelete(@Param('id') id: string) {
-    return this.usersService.softDelete(id);
+  softDelete(@CurrentUser() actor: any, @Param('id') id: string) {
+    return this.usersService.softDelete(id, actor);
   }
 }

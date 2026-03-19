@@ -1,4 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
+import { useEffect } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import CarsList from './pages/CarsList';
@@ -13,14 +16,20 @@ import Navbar from './components/Navbar';
 import { useAuth } from './hooks/useAuth';
 
 const RoleRoute = ({ allowedRoles }: { allowedRoles: string[] }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
-  if (!user) {
+  useEffect(() => {
+    if (token && user && !allowedRoles.includes(user.role)) {
+      toast.error('You do not have access to this page.');
+    }
+  }, [allowedRoles, token, user]);
+
+  if (!token || !user) {
     return <Navigate to="/login" replace />;
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/cars" replace />;
+    return <Navigate to="/profile" replace />;
   }
 
   return <Outlet />;
@@ -45,13 +54,19 @@ export const router = createBrowserRouter([
       { path: 'map', element: <CarsMap /> },
       { path: 'cars/:id', element: <CarDetails /> },
       { path: 'profile', element: <Profile /> },
-      { path: 'admin/cars', element: <AdminCars /> },
+      {
+        element: <RoleRoute allowedRoles={['ADMIN']} />,
+        children: [{ path: 'admin/cars', element: <AdminCars /> }],
+      },
       {
         element: <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} />,
         children: [
           { path: 'admin/users', element: <AdminUsers /> },
-          { path: 'admin/rentals/active', element: <AdminActiveRentals /> },
         ],
+      },
+      {
+        element: <RoleRoute allowedRoles={['ADMIN']} />,
+        children: [{ path: 'admin/rentals/active', element: <AdminActiveRentals /> }],
       },
       {
         element: <RoleRoute allowedRoles={['SUPERADMIN']} />,

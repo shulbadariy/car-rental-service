@@ -5,6 +5,7 @@ interface AuthState {
   token: string | null;
   login: (token: string, user?: Partial<{ id: string; email: string; role: string }>) => void;
   logout: () => void;
+  initializeAuth: () => void;
 }
 
 function decodeJwt(token: string) {
@@ -21,6 +22,16 @@ function getUserFromToken(token: string | null) {
   if (!token) return null;
   const decoded = decodeJwt(token);
   if (!decoded) return null;
+
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  if (typeof decoded.exp === 'number' && decoded.exp <= nowInSeconds) {
+    return null;
+  }
+
+  if (typeof decoded.sub !== 'string' || typeof decoded.email !== 'string') {
+    return null;
+  }
+
   return {
     id: decoded.sub as string,
     email: decoded.email as string,
@@ -29,15 +40,33 @@ function getUserFromToken(token: string | null) {
 }
 
 export const useAuth = create<AuthState>((set) => {
-  const token = localStorage.getItem('token');
   return {
-    user: getUserFromToken(token),
-    token,
+    user: null,
+    token: null,
+    initializeAuth: () => {
+      const storedToken = localStorage.getItem('token');
+      const user = getUserFromToken(storedToken);
+
+      if (!storedToken || !user) {
+        localStorage.removeItem('token');
+        set({ token: null, user: null });
+        return;
+      }
+
+      set({ token: storedToken, user });
+    },
     login: (token, user) => {
       const derivedUser =
         user && user.role && user.email
           ? { id: user.id ?? '', email: user.email, role: user.role }
           : getUserFromToken(token);
+
+      if (!derivedUser) {
+        localStorage.removeItem('token');
+        set({ token: null, user: null });
+        return;
+      }
+
       localStorage.setItem('token', token);
       set({ token, user: derivedUser });
     },
@@ -47,3 +76,5 @@ export const useAuth = create<AuthState>((set) => {
     },
   };
 });
+
+useAuth.getState().initializeAuth();

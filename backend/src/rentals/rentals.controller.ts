@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RentalsService } from './rentals.service';
 import { RentCarDto } from './dto/rent-car.dto';
@@ -27,8 +27,16 @@ export class RentalsController {
   }
 
   @Post('stop')
+  @Roles(Role.USER, Role.ADMIN, Role.SUPERADMIN)
   stopRental(@CurrentUser() user: any, @Body() dto: ReturnCarDto) {
-    return this.rentalsService.stopRental(user.userId, dto.rentalId);
+    return this.rentalsService.stopRental(user.userId, dto.rentalId, user.role);
+  }
+
+  @Patch(':id/force-stop')
+  @Roles(Role.ADMIN)
+  forceStop(@Param('id') rentalId: string, @CurrentUser() user: any) {
+    void user;
+    return this.rentalsService.forceStopRental(rentalId);
   }
 
   @Get('my')
@@ -37,8 +45,8 @@ export class RentalsController {
   }
 
   @Get('active')
-  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @Roles(Role.ADMIN)
   active() {
-    return this.rentalsService.getActive();
+    return this.rentalsService.getActiveRentals();
   }
 }

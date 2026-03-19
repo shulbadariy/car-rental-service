@@ -49,6 +49,7 @@ model Car {
   status         CarStatus @default(AVAILABLE)
   lat            Float
   lng            Float
+  deletedAt      DateTime?
   createdAt      DateTime  @default(now())
 
   rentals    Rental[]

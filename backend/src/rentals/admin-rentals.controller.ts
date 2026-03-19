@@ -14,7 +14,7 @@ export class AdminRentalsController {
   constructor(private readonly rentalsService: RentalsService) {}
 
   @Get('active')
-  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  @Roles(Role.ADMIN)
   getActiveRentals() {
     return this.rentalsService.getActiveRentals();
   }
