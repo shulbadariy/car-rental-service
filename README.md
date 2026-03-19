@@ -30,28 +30,36 @@ All roles inherit the permissions of the USER role.
   - Update and delete users
   - Cannot manage cars or rentals
 
-🚀 Quick Start
+## 🚀 Quick Start
 git clone https://github.com/shulbadariy/car-rental-service.git
 cd car-rental-service
-Backend
+
+# Backend
 cd backend
 npm install
 cp .env.example .env
 npx prisma migrate dev && npx prisma db seed
 npm run start:dev
-Frontend
-cd frontend
+
+# Frontend
+cd ../frontend
 npm install
 cp .env.example .env
 npm run dev
 
 Open: http://localhost:5173
 
-👤 Demo Accounts
-Role	Email	Password
-SUPERADMIN	admin@test.com	123456
-ADMIN	admin2@test.com	123456
-USER	user@test.com	123456
+# ✅ Demo Accounts тоже нужно поправить
+
+### 💬 сделай так:
+
+## 👤 Demo Accounts
+
+| Role        | Email            | Password |
+|------------|------------------|----------|
+| SUPERADMIN | admin@test.com   | 123456   |
+| ADMIN      | admin2@test.com  | 123456   |
+| USER       | user@test.com    | 123456   |
 📝 Notes
 
 PostgreSQL must be running locally
